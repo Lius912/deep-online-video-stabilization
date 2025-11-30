@@ -194,18 +194,19 @@ class VideoStabilizer():
 
     def stabilization_start(self, frame_unstable):
         if self.before_ch_i < self.before_ch:
-            self.before_frames.append(cvt_img2train(frame_unstable, crop_rate))
-            self.before_masks.append(np.zeros([1, height, width, 1], dtype=np.float))
-        
-            # TODO probably not needed
-            # temp = before_frames[i]
-            # temp = ((np.reshape(temp, (height, width)) + 0.5) * 255).astype(np.uint8)
-
-            # temp = np.concatenate([temp, np.zeros_like(temp)], axis=1)
-            # temp = np.concatenate([temp, np.zeros_like(temp)], axis=0)
+            while self.before_ch_i < self.before_ch:
+                self.before_frames.append(cvt_img2train(frame_unstable, crop_rate))
+                self.before_masks.append(np.zeros([1, height, width, 1], dtype=np.float))
             
-            self.before_ch_i += 1
-            return frame_unstable, False
+                # TODO probably not needed
+                # temp = before_frames[i]
+                # temp = ((np.reshape(temp, (height, width)) + 0.5) * 255).astype(np.uint8)
+
+                # temp = np.concatenate([temp, np.zeros_like(temp)], axis=1)
+                # temp = np.concatenate([temp, np.zeros_like(temp)], axis=0)
+                
+                self.before_ch_i += 1
+            return cv2.resize(frame_unstable, (width, height)), False
         
         if self.after_ch_i < self.after_ch:
             self.after_temp.append(frame_unstable)
