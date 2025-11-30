@@ -257,7 +257,7 @@ class VideoStabilizer():
         if (args.no_bm == 0):
             in_x.append(self.black_mask)
 
-        print(height, width, np.array(in_x).shape)
+        print(height, width)
         in_x = np.concatenate(in_x, axis = 3)
 
         if MaxSpan != 1:
