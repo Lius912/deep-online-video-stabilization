@@ -137,12 +137,12 @@ def warpRevBundle2(img, x_map, y_map):
     assert(img.ndim == 3)
     assert(img.shape[-1] == 3)
     rate = 4
-    x_map = cv2.resize(cv2.resize(x_map, (int(width / rate), int(height / rate))), (width, height))
-    y_map = cv2.resize(cv2.resize(y_map, (int(width / rate), int(height / rate))), (width, height))
-    x_map = (x_map + 1) / 2 * width
-    y_map = (y_map + 1) / 2 * height
+    x_map = cv2.resize(cv2.resize(x_map, (int(output_width / rate), int(output_height / rate))), (output_width, output_height))
+    y_map = cv2.resize(cv2.resize(y_map, (int(output_width / rate), int(output_height / rate))), (output_width, output_height))
+    x_map = (x_map + 1) / 2 * output_width
+    y_map = (y_map + 1) / 2 * output_height
     dst = cv2.remap(img, x_map, y_map, cv2.INTER_LINEAR)
-    assert(dst.shape == (height, width, 3))
+    assert(dst.shape == (output_height, output_width, 3))
     return dst
 
 def warpRevBundle(img, Hs):
