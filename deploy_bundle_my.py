@@ -367,7 +367,7 @@ for video_name in video_list:
             
             
             start_time = time.time()
-            stable_frame = stabilizer.get_stable_frame(frame_unstable)
+            stable_frame, is_stable = stabilizer.get_stable_frame(frame_unstable)
             tot_time += time.time() - start_time
             
             videoWriter.write(stable_frame)
