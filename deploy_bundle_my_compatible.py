@@ -197,7 +197,7 @@ class VideoStabilizer():
         if self.before_ch_i < self.before_ch:
             while self.before_ch_i < self.before_ch:
                 self.before_frames.append(cvt_img2train(frame_unstable, crop_rate))
-                self.before_masks.append(np.zeros([1, height, width, 1], dtype=np.float))
+                self.before_masks.append(np.zeros([1, height, width, 1], dtype=np.float64))
             
                 # TODO probably not needed
                 # temp = before_frames[i]
@@ -225,8 +225,8 @@ class VideoStabilizer():
         dh = int(height * 0.8 / 2)
         dw = int(width * 0.8 / 2)
 
-        black_mask = np.zeros([dh, width], dtype=np.float)
-        temp_mask = np.concatenate([np.zeros([height - 2 * dh, dw], dtype=np.float), np.ones([height - 2 * dh, width - 2 * dw], dtype=np.float), np.zeros([height - 2 * dh, dw], dtype=np.float)], axis=1)
+        black_mask = np.zeros([dh, width], dtype=np.float64)
+        temp_mask = np.concatenate([np.zeros([height - 2 * dh, dw], dtype=np.float64), np.ones([height - 2 * dh, width - 2 * dw], dtype=np.float64), np.zeros([height - 2 * dh, dw], dtype=np.float64)], axis=1)
         self.black_mask = np.reshape(np.concatenate([black_mask, temp_mask, black_mask], axis=0),[1, height, width, 1]) 
 
         return None, False
