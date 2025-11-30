@@ -404,6 +404,7 @@ while are_videos_left:
             socket.send_pyobj(stable_frame)
             
             
+            
             length = length + 1
             if (length % 10 == 0):
                 print("length: " + str(length))      
