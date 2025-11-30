@@ -34,8 +34,11 @@ args = parser.parse_args()
 MaxSpan = args.max_span
 args.indices = indices[1:]
 
-
-sess = tf.Session(config=tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction, allow_growth=True)))
+tf.reset_default_graph()
+config_proto = tf.ConfigProto()
+config_proto.gpu_options.per_process_gpu_memory_fraction = args.gpu_memory_fraction
+config_proto.gpu_options.allow_growth = True # CRITICAL for "No DNN" error
+sess = tf.Session(config=config_proto)
 
 model_dir = args.model_dir#'models/vbeta-1.1.0/'
 model_name = args.model_name#'model-5000'
