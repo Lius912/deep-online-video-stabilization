@@ -190,18 +190,7 @@ class VideoStabilizer():
         self.before_ch = before_ch
         self.after_ch = after_ch
         
-        self.before_frames = []
-        self.before_masks = []
-        self.after_frames = []
-        self.after_temp = []
-        
-        self.black = None
-        self.in_xs = None
-        self.black_mask = None
-        
-        self.after_ch_i = 0
-        self.before_ch_i = 0
-        self.has_started = False
+        self.reset()
 
     def stabilization_start(self, frame_unstable):
         if self.before_ch_i < self.before_ch:
@@ -242,7 +231,7 @@ class VideoStabilizer():
     
     def get_stable_frame_infer(self, frame_unstable):
         if self.black is not None:
-            self.before_frames.append(frame)
+            self.before_frames.append(self.frame)
             self.before_masks.append(self.black.reshape((1, height, width, 1)))
             
             self.before_frames.pop(0)
@@ -287,9 +276,9 @@ class VideoStabilizer():
             ymap = y_map_[0, :, :, 0]
             self.all_black = self.all_black + np.round(self.black).astype(np.int64)
             img = img[0, :, :, :].reshape(height, width)
-            frame = img + self.black * (-1)
-            frame = frame.reshape(1, height, width, 1)
-            tmp_in_x[..., -1] = frame[..., 0]
+            self.frame = img + self.black * (-1)
+            self.frame = self.frame.reshape(1, height, width, 1)
+            tmp_in_x[..., -1] = self.frame[..., 0]
         img = ((np.reshape(img, (height, width)) + 0.5) * 255).astype(np.uint8)
         
         img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
@@ -320,6 +309,13 @@ class VideoStabilizer():
         self.before_masks = []
         self.after_frames = []
         self.after_temp = []
+        
+        self.black = None
+        self.frame = None
+        
+        self.in_xs = None
+        self.black_mask = None
+        self.all_black = None
         
         self.after_ch_i = 0
         self.before_ch_i = 0
