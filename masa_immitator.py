@@ -61,7 +61,7 @@ try:
         video_info = {"fps": fps, "output_width": output_width, "output_height": output_height}
         socket.send_pyobj(video_info)
 
-        videoWriter = cv2.VideoWriter(os.path.join(production_dir, video_name + '.avi'), 
+        videoWriter = cv2.VideoWriter(os.path.join(args.output_dir, video_name + '.avi'), 
             cv2.VideoWriter_fourcc('M','J','P','G'), fps, (output_width, output_height))
         
         while True:
