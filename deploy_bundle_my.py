@@ -302,7 +302,7 @@ class VideoStabilizer():
         
         stable_frame = self.get_stable_frame_infer(frame_unstable)
 
-        return stable_frame, is_stable
+        return stable_frame, True
 
     def reset(self):
         self.before_frames = []
