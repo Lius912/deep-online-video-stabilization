@@ -52,6 +52,7 @@ frame_count = 0
 
 try:
     for video_name in video_list:
+        print("video_name: {}".format(video_name))
         unstable_cap = cv2.VideoCapture(os.path.join(args.prefix,'unstable', video_name))
 
         fps = unstable_cap.get(cv2.CAP_PROP_FPS)
