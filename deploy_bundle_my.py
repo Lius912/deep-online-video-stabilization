@@ -257,6 +257,7 @@ class VideoStabilizer():
         if (args.no_bm == 0):
             in_x.append(self.black_mask)
 
+        print(f"{height=}, {width=}, {np.array(in_x).shape}")
         in_x = np.concatenate(in_x, axis = 3)
 
         if MaxSpan != 1:
@@ -338,6 +339,8 @@ for video_name in video_list:
     fps = unstable_cap.get(cv2.CAP_PROP_FPS)
     width = int(unstable_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(unstable_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    
 
     
 
@@ -380,7 +383,7 @@ for video_name in video_list:
     except Exception as e:
         traceback.print_exc()
     finally:
-        print('total length={}'.format(length + 2))
+        print('total length={}'.format(length))
         videoWriter.release()
         #videoWriterTest.release()
         unstable_cap.release()
