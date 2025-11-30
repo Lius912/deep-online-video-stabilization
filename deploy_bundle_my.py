@@ -336,8 +336,9 @@ for video_name in video_list:
     unstable_cap = cv2.VideoCapture(os.path.join(args.prefix,'unstable', video_name))
     
     fps = unstable_cap.get(cv2.CAP_PROP_FPS)
-    width = cv2.CAP_PROP_FRAME_WIDTH
-    height = cv2.CAP_PROP_FRAME_HEIGHT
+    width = unstable_cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height = unstable_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
     
 
     print(fps)
