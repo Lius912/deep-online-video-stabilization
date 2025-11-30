@@ -181,6 +181,150 @@ make_dirs(production_dir)
 # make_dirs(visual_dir)
 
 
+from copy import deepcopy
+
+class VideoStabilizer():
+    def __init__(self, fps, before_ch, after_ch):
+        self.fps = fps
+        
+        self.before_ch = before_ch
+        self.after_ch = after_ch
+        
+        self.before_frames = []
+        self.before_masks = []
+        self.after_frames = []
+        self.after_temp = []
+        
+        self.black = None
+        self.in_xs = None
+        self.black_mask = None
+        
+        self.after_ch_i = 0
+        self.before_ch_i = 0
+        self.has_started = False
+
+    def stabilization_start(self, frame_unstable):
+        if self.before_ch_i < self.before_ch:
+            self.before_frames.append(cvt_img2train(frame_unstable, crop_rate))
+            self.before_masks.append(np.zeros([1, height, width, 1], dtype=np.float))
+        
+            # TODO probably not needed
+            # temp = before_frames[i]
+            # temp = ((np.reshape(temp, (height, width)) + 0.5) * 255).astype(np.uint8)
+
+            # temp = np.concatenate([temp, np.zeros_like(temp)], axis=1)
+            # temp = np.concatenate([temp, np.zeros_like(temp)], axis=0)
+            
+            self.before_ch_i += 1
+            return frame_unstable, False
+        
+        if self.after_ch_i < self.after_ch:
+            self.after_temp.append(frame_unstable)
+            self.after_frames.append(cvt_img2train(frame_unstable, 1))
+            
+            self.after_ch_i += 1
+            
+            if self.after_ch_i < self.after_ch:
+                return frame_unstable, False
+
+        self.in_xs = []
+
+        self.all_black = np.zeros([height, width], dtype=np.int64)
+
+        dh = int(height * 0.8 / 2)
+        dw = int(width * 0.8 / 2)
+
+        black_mask = np.zeros([dh, width], dtype=np.float)
+        temp_mask = np.concatenate([np.zeros([height - 2 * dh, dw], dtype=np.float), np.ones([height - 2 * dh, width - 2 * dw], dtype=np.float), np.zeros([height - 2 * dh, dw], dtype=np.float)], axis=1)
+        self.black_mask = np.reshape(np.concatenate([black_mask, temp_mask, black_mask], axis=0),[1, height, width, 1]) 
+
+        return None, False
+    
+    def get_stable_frame_infer(self, frame_unstable):
+        if self.black is not None:
+            self.before_frames.append(frame)
+            self.before_masks.append(self.black.reshape((1, height, width, 1)))
+            
+            self.before_frames.pop(0)
+            self.before_masks.pop(0)
+            self.after_frames.append(cvt_img2train(frame_unstable, 1))
+            self.after_frames.pop(0)
+            self.after_temp.append(frame_unstable)
+            self.after_temp.pop(0)
+        
+        in_x = []
+        if input_mask:
+            for i in args.indices:
+                if (i > 0):
+                    in_x.append(self.before_masks[-i])
+        for i in args.indices:
+            if (i > 0):
+                in_x.append(self.before_frames[-i])
+        in_x.append(self.after_frames[0])
+        for i in args.indices:
+            if (i < 0):
+                in_x.append(self.after_frames[-i])
+        if (args.no_bm == 0):
+            in_x.append(self.black_mask)
+
+        in_x = np.concatenate(in_x, axis = 3)
+
+        if MaxSpan != 1:
+            self.in_xs.append(in_x)
+            if len(self.in_xs) > MaxSpan: 
+                self.in_xs = self.in_xs[-1:]
+                print('cut')
+            in_x = self.in_xs[0].copy()
+            in_x[0, ..., self.before_ch] = self.after_frames[0][..., 0]
+        tmp_in_x = in_x.copy()
+        for j in range(args.refine):
+            # start = time.time()
+            img, self.black, Hs, x_map_, y_map_ = sess.run([output, black_pix, Hs_tensor, x_map, y_map], feed_dict={x_tensor:tmp_in_x})
+            # tot_time += time.time() - start
+            
+            self.black = self.black[0, :, :]
+            xmap = x_map_[0, :, :, 0]
+            ymap = y_map_[0, :, :, 0]
+            self.all_black = self.all_black + np.round(self.black).astype(np.int64)
+            img = img[0, :, :, :].reshape(height, width)
+            frame = img + self.black * (-1)
+            frame = frame.reshape(1, height, width, 1)
+            tmp_in_x[..., -1] = frame[..., 0]
+        img = ((np.reshape(img, (height, width)) + 0.5) * 255).astype(np.uint8)
+        
+        img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+
+        img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (width, height)), xmap, ymap)
+        stable_frame = img_warped
+        return stable_frame
+        
+        
+
+    def get_stable_frame(self, frame_unstable):
+        
+        # TODO check the logic
+        if not self.has_started:
+            stable_frame, is_stable = self.stabilization_start(frame_unstable)
+            
+            if stable_frame is not None:
+                return stable_frame, is_stable
+            
+            self.has_started = True
+        
+        stable_frame = self.get_stable_frame_infer(frame_unstable)
+
+        return stable_frame, is_stable
+
+    def reset(self):
+        self.before_frames = []
+        self.before_masks = []
+        self.after_frames = []
+        self.after_temp = []
+        
+        self.after_ch_i = 0
+        self.before_ch_i = 0
+        self.has_started = False
+        
 
 
 
@@ -195,139 +339,44 @@ for video_name in video_list:
     unstable_cap = cv2.VideoCapture(os.path.join(args.prefix,'unstable', video_name))
     
     fps = unstable_cap.get(cv2.CAP_PROP_FPS)
-    cut_fps = False
-    if (fps > 40):
-        fps /= 2
-        cut_fps = True
+    
 
     print(fps)
     print(os.path.join(args.prefix,'unstable', video_name))
     
     videoWriter = cv2.VideoWriter(os.path.join(production_dir, video_name + '.avi'), 
             cv2.VideoWriter_fourcc('M','J','P','G'), fps, (width, height))
-    
-    before_frames = []
-    before_masks = []
-    after_frames = []
-    after_temp = []
+
     print(video_name)
 
-    ret, unstable_cap_frame = unstable_cap.read()
-    frame = unstable_cap_frame
 
     # TODO try with original width and height
-    videoWriter.write(cv2.resize(frame, (width, height)))
-    
-    for i in range(before_ch):
-        before_frames.append(cvt_img2train(frame, crop_rate))
-        before_masks.append(np.zeros([1, height, width, 1], dtype=np.float))
-        temp = before_frames[i]
-        temp = ((np.reshape(temp, (height, width)) + 0.5) * 255).astype(np.uint8)
+    # TODO check first frames handling
 
-        temp = np.concatenate([temp, np.zeros_like(temp)], axis=1)
-        temp = np.concatenate([temp, np.zeros_like(temp)], axis=0)
-
-    for i in range(after_ch):
-        if (cut_fps):
-            ret, frame = unstable_cap.read() 
-        ret, frame = unstable_cap.read()
-        frame_unstable = frame
-        after_temp.append(frame)
-        after_frames.append(cvt_img2train(frame, 1))
+    stabilizer = VideoStabilizer(fps, before_ch, after_ch)
 
     length = 0
-    in_xs = []
-    delta = 0
-    speed = args.random_black
-    dh = int(height * 0.8 / 2)
-    dw = int(width * 0.8 / 2)
+    full_time_started = time.time()
     
-    # TODO do we need to use their width and height
-    all_black = np.zeros([height, width], dtype=np.int64)
-    frames = []
-
-    black_mask = np.zeros([dh, width], dtype=np.float)
-    temp_mask = np.concatenate([np.zeros([height - 2 * dh, dw], dtype=np.float), np.ones([height - 2 * dh, width - 2 * dw], dtype=np.float), np.zeros([height - 2 * dh, dw], dtype=np.float)], axis=1)
-    black_mask = np.reshape(np.concatenate([black_mask, temp_mask, black_mask], axis=0),[1, height, width, 1]) 
-
     try:
         while(True):
-            in_x = []
-            if input_mask:
-                for i in args.indices:
-                    if (i > 0):
-                        in_x.append(before_masks[-i])
-            for i in args.indices:
-                if (i > 0):
-                    in_x.append(before_frames[-i])
-            in_x.append(after_frames[0])
-            for i in args.indices:
-                if (i < 0):
-                    in_x.append(after_frames[-i])
-            if (args.no_bm == 0):
-                in_x.append(black_mask)
-
-            in_x = np.concatenate(in_x, axis = 3)
-
-            if MaxSpan != 1:
-                in_xs.append(in_x)
-                if len(in_xs) > MaxSpan: 
-                    in_xs = in_xs[-1:]
-                    print('cut')
-                in_x = in_xs[0].copy()
-                in_x[0, ..., before_ch] = after_frames[0][..., 0]
-            tmp_in_x = in_x.copy()
-            for j in range(args.refine):
-                start = time.time()
-                img, black, Hs, x_map_, y_map_ = sess.run([output, black_pix, Hs_tensor, x_map, y_map], feed_dict={x_tensor:tmp_in_x})
-                tot_time += time.time() - start
-                black = black[0, :, :]
-                xmap = x_map_[0, :, :, 0]
-                ymap = y_map_[0, :, :, 0]
-                all_black = all_black + np.round(black).astype(np.int64)
-                img = img[0, :, :, :].reshape(height, width)
-                frame = img + black * (-1)
-                frame = frame.reshape(1, height, width, 1)
-                tmp_in_x[..., -1] = frame[..., 0]
-            img = ((np.reshape(img, (height, width)) + 0.5) * 255).astype(np.uint8)
-            
-            net_output = img
-            img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
-            #videoWriterTest.write(img)
-
-            #img_warped = warpRevBundle(cv2.resize(frame_unstable, (width, height)), Hs[0])
-            img_warped = warpRevBundle2(cv2.resize(after_temp[0], (width, height)), xmap, ymap)
-            frames.append(img_warped)
-            videoWriter.write(img_warped)
-
-            if (cut_fps):
-                ret, frame_unstable = unstable_cap.read() 
             ret, frame_unstable = unstable_cap.read() 
             
             if (not ret):
                 break
+            
+            
+            start_time = time.time()
+            stable_frame = stabilizer.get_stable_frame(frame_unstable)
+            tot_time += time.time() - start_time
+            
+            videoWriter.write(stable_frame)
+            
             length = length + 1
             if (length % 10 == 0):
                 print("length: " + str(length))      
                 print('fps={}'.format(length / tot_time))
-
-            before_frames.append(frame)
-            before_masks.append(black.reshape((1, height, width, 1)))
-            
-            # TODO maybe needed
-            # if args.infer_with_last:
-            #     for i in range(len(before_frames)):
-            #         before_frames[i] = before_frames[-1]
-            
-            before_frames.pop(0)
-            before_masks.pop(0)
-            after_frames.append(cvt_img2train(frame_unstable, 1))
-            after_frames.pop(0)
-            after_temp.append(frame_unstable)
-            after_temp.pop(0)
-
-            #if (len == 100):
-            #    break
+                print('full time={}'.format(time.time() - full_time_started))
     except Exception as e:
         traceback.print_exc()
     finally:
