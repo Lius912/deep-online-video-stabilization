@@ -94,7 +94,7 @@ except KeyboardInterrupt:
     socket.recv()
 
 finally:
-    print("Sender: End of video.")
+    print("Sender: End of videos.")
     # Send a stop signal so the receiver knows to quit
     socket.send_pyobj("STOP")
     socket.recv() # Wait for final ack

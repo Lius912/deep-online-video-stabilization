@@ -345,7 +345,16 @@ while are_videos_left:
     # stable_cap = cv2.VideoCapture(os.path.join(args.prefix,'stable', video_name)) 
     # unstable_cap = cv2.VideoCapture(os.path.join(args.prefix,'unstable', video_name))
     
-    video_info = socket.recv_pyobj()
+    recv_obj = socket.recv_pyobj()
+
+    # Check for stop signal
+    if isinstance(recv_obj, str):
+        if recv_obj == "STOP":
+            print("Receiver: Stop signal received. Shutting down.")
+            socket.send_string("ACK")
+            break
+    video_info = recv_obj
+    
 
     print("video info received")
     socket.send_string("ACK")
@@ -376,11 +385,6 @@ while are_videos_left:
 
             # Check for stop signal
             if isinstance(recv_obj, str):
-                if recv_obj == "STOP":
-                    print("Receiver: Stop signal received. Shutting down.")
-                    socket.send_string("ACK")
-                    are_videos_left = False
-                    break
                 if recv_obj == "NEXT VIDEO":
                     print("Receiver: next video signal received.")
                     socket.send_string("ACK")
