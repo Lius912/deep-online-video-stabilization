@@ -206,7 +206,7 @@ class VideoStabilizer():
                 # temp = np.concatenate([temp, np.zeros_like(temp)], axis=0)
                 
                 self.before_ch_i += 1
-            return cv2.resize(frame_unstable, (width, height)), False
+            return cv2.resize(frame_unstable, (output_width, output_height)), False
         
         if self.after_ch_i < self.after_ch:
             self.after_temp.append(frame_unstable)
@@ -257,7 +257,7 @@ class VideoStabilizer():
         if (args.no_bm == 0):
             in_x.append(self.black_mask)
 
-        print(height, width)
+
         in_x = np.concatenate(in_x, axis = 3)
 
         if MaxSpan != 1:
@@ -285,7 +285,7 @@ class VideoStabilizer():
         
         img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
 
-        img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (width, height)), xmap, ymap)
+        img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (output_width, output_height)), xmap, ymap)
         stable_frame = img_warped
         return stable_frame
         
@@ -337,8 +337,8 @@ for video_name in video_list:
     unstable_cap = cv2.VideoCapture(os.path.join(args.prefix,'unstable', video_name))
     
     fps = unstable_cap.get(cv2.CAP_PROP_FPS)
-    width = int(unstable_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(unstable_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    output_width = int(unstable_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    output_height = int(unstable_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     
     
 
@@ -348,7 +348,7 @@ for video_name in video_list:
     print(os.path.join(args.prefix,'unstable', video_name))
     
     videoWriter = cv2.VideoWriter(os.path.join(production_dir, video_name + '.avi'), 
-            cv2.VideoWriter_fourcc('M','J','P','G'), fps, (width, height))
+            cv2.VideoWriter_fourcc('M','J','P','G'), fps, (output_width, output_height))
 
     print(video_name)
 
