@@ -358,12 +358,6 @@ while are_videos_left:
     
 
     print("fps: {}, width: {}, height: {}".format(fps, output_width, output_height))
-    print(os.path.join(args.prefix,'unstable', video_name))
-    
-    
-
-    print(video_name)
-
 
     # TODO try with original width and height
     # TODO check first frames handling
