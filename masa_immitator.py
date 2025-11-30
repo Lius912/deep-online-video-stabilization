@@ -52,6 +52,8 @@ frame_count = 0
 
 try:
     for video_name in video_list:
+        if video_name.strip() == "":
+            continue
         print("video_name: {}".format(video_name))
         unstable_cap = cv2.VideoCapture(os.path.join(args.prefix,'unstable', video_name))
 

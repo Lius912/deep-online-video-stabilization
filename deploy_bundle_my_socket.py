@@ -385,6 +385,11 @@ while are_videos_left:
 
             # Check for stop signal
             if isinstance(recv_obj, str):
+                if recv_obj == "STOP":
+                    print("Receiver: Stop signal received. Shutting down.")
+                    socket.send_string("ACK")
+                    are_videos_left = False
+                    break
                 if recv_obj == "NEXT VIDEO":
                     print("Receiver: next video signal received.")
                     socket.send_string("ACK")
