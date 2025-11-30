@@ -84,13 +84,7 @@ try:
             # If your receiver sends back a processed image, read it here.
             response = socket.recv_pyobj()
             
-            # If the receiver sent back an image, display it
-            if isinstance(response, str):
-                print(f"Sender: Received message: {response}")
-            else:
-                cv2.imshow("Processed Result from Other Process", response)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+            videoWriter.write(response)
             
             frame_count += 1
 
