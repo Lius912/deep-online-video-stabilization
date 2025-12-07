@@ -296,28 +296,30 @@ class VideoStabilizer():
         
         print(bboxs_coords)
         
-        u_coords = bboxs_coords[:, 0]
-        v_coords = bboxs_coords[:, 1]
-        
-        x_prime = map_coordinates(
-            smoothed_x_map, 
-            [v_coords, u_coords], 
-            order=1, 
-            mode='nearest'
-        )
-        
-        y_prime = map_coordinates(
-            smoothed_y_map, 
-            [v_coords, u_coords], 
-            order=1, 
-            mode='nearest'
-        )
+        if len(bboxs_coords) != 0:
+            u_coords = bboxs_coords[:, 0]
+            v_coords = bboxs_coords[:, 1]
+            
+            x_prime = map_coordinates(
+                smoothed_x_map, 
+                [v_coords, u_coords], 
+                order=1, 
+                mode='nearest'
+            )
+            
+            y_prime = map_coordinates(
+                smoothed_y_map, 
+                [v_coords, u_coords], 
+                order=1, 
+                mode='nearest'
+            )
 
 
 
         img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (output_width, output_height)), smoothed_x_map, smoothed_y_map)
 
-        stable_bboxs_coords = np.stack([x_prime, y_prime], axis=-1)
+        if len(bboxs_coords) != 0:
+            stable_bboxs_coords = np.stack([x_prime, y_prime], axis=-1)
 
         stable_frame = img_warped
         return stable_frame, stable_bboxs_coords
