@@ -292,21 +292,21 @@ class VideoStabilizer():
         img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
         
 
-        x_map, y_map = smooth_mapping(x_map, y_map)
+        smoothed_x_map, smoothed_y_map = smooth_mapping(xmap, ymap)
         
         
         u_coords = bboxs_coords[:, 0]
         v_coords = bboxs_coords[:, 1]
         
         x_prime = map_coordinates(
-            x_map, 
+            smoothed_x_map, 
             [v_coords, u_coords], 
             order=1, 
             mode='nearest'
         )
         
         y_prime = map_coordinates(
-            y_map, 
+            smoothed_y_map, 
             [v_coords, u_coords], 
             order=1, 
             mode='nearest'
@@ -314,7 +314,7 @@ class VideoStabilizer():
 
 
 
-        img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (output_width, output_height)), xmap, ymap)
+        img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (output_width, output_height)), smoothed_x_map, smoothed_y_map)
 
         stable_bboxs_coords = np.stack([x_prime, y_prime], axis=-1)
 
