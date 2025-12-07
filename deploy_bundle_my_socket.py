@@ -320,6 +320,8 @@ class VideoStabilizer():
 
         if len(bboxs_coords) != 0:
             stable_bboxs_coords = np.stack([x_prime, y_prime], axis=-1)
+        else:
+            stable_bboxs_coords = bboxs_coords
 
         stable_frame = img_warped
         return stable_frame, stable_bboxs_coords
