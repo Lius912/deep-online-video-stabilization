@@ -294,6 +294,7 @@ class VideoStabilizer():
 
         smoothed_x_map, smoothed_y_map = smooth_mapping(xmap, ymap)
         
+        print(bboxs_coords)
         
         u_coords = bboxs_coords[:, 0]
         v_coords = bboxs_coords[:, 1]
