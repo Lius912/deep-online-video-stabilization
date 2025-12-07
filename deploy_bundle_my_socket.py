@@ -141,6 +141,7 @@ def smooth_mapping(x_map, y_map):
     y_map = cv2.resize(cv2.resize(y_map, (int(output_width / rate), int(output_height / rate))), (output_width, output_height))
     x_map = (x_map + 1) / 2 * output_width
     y_map = (y_map + 1) / 2 * output_height
+    return x_map, y_map
 
 def warpRevBundle2(img, x_map, y_map):
     assert(img.ndim == 3)
