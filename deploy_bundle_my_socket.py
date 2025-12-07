@@ -8,6 +8,8 @@ import os
 import traceback
 import math
 import argparse
+from scipy.ndimage import map_coordinates # Requires SciPy to be installed
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model-dir')
@@ -133,14 +135,17 @@ def cvt_theta_mat_bundle(Hs):
 
     return np.matmul(np.matmul(scale_mat, Hs), inv(scale_mat))
 
-def warpRevBundle2(img, x_map, y_map):
-    assert(img.ndim == 3)
-    assert(img.shape[-1] == 3)
+def smooth_mapping(x_map, y_map):
     rate = 4
     x_map = cv2.resize(cv2.resize(x_map, (int(output_width / rate), int(output_height / rate))), (output_width, output_height))
     y_map = cv2.resize(cv2.resize(y_map, (int(output_width / rate), int(output_height / rate))), (output_width, output_height))
     x_map = (x_map + 1) / 2 * output_width
     y_map = (y_map + 1) / 2 * output_height
+
+def warpRevBundle2(img, x_map, y_map):
+    assert(img.ndim == 3)
+    assert(img.shape[-1] == 3)
+    
     dst = cv2.remap(img, x_map, y_map, cv2.INTER_LINEAR)
     assert(dst.shape == (output_height, output_width, 3))
     return dst
@@ -192,7 +197,7 @@ class VideoStabilizer():
         
         self.reset()
 
-    def stabilization_start(self, frame_unstable):
+    def stabilization_start(self, frame_unstable, bboxs_coords):
         if self.before_ch_i < self.before_ch:
             while self.before_ch_i < self.before_ch:
                 self.before_frames.append(cvt_img2train(frame_unstable, crop_rate))
@@ -206,7 +211,7 @@ class VideoStabilizer():
                 # temp = np.concatenate([temp, np.zeros_like(temp)], axis=0)
                 
                 self.before_ch_i += 1
-            return cv2.resize(frame_unstable, (output_width, output_height)), False
+            return cv2.resize(frame_unstable, (output_width, output_height)), bboxs_coords, False
         
         if self.after_ch_i < self.after_ch:
             self.after_temp.append(frame_unstable)
@@ -215,7 +220,7 @@ class VideoStabilizer():
             self.after_ch_i += 1
             
             if self.after_ch_i < self.after_ch:
-                return frame_unstable, False
+                return frame_unstable, bboxs_coords, False
 
         self.in_xs = []
 
@@ -228,9 +233,9 @@ class VideoStabilizer():
         temp_mask = np.concatenate([np.zeros([height - 2 * dh, dw], dtype=np.float), np.ones([height - 2 * dh, width - 2 * dw], dtype=np.float), np.zeros([height - 2 * dh, dw], dtype=np.float)], axis=1)
         self.black_mask = np.reshape(np.concatenate([black_mask, temp_mask, black_mask], axis=0),[1, height, width, 1]) 
 
-        return None, False
+        return None, None, False
     
-    def get_stable_frame_infer(self, frame_unstable):
+    def get_stable_frame_infer(self, frame_unstable, bboxs_coords):
         if self.black is not None:
             self.before_frames.append(self.frame)
             self.before_masks.append(self.black.reshape((1, height, width, 1)))
@@ -284,27 +289,51 @@ class VideoStabilizer():
         img = ((np.reshape(img, (height, width)) + 0.5) * 255).astype(np.uint8)
         
         img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+        
+
+        x_map, y_map = smooth_mapping(x_map, y_map)
+        
+        
+        u_coords = bboxs_coords[:, 0]
+        v_coords = bboxs_coords[:, 1]
+        
+        x_prime = map_coordinates(
+            x_map, 
+            [v_coords, u_coords], 
+            order=1, 
+            mode='nearest'
+        )
+        
+        y_prime = map_coordinates(
+            y_map, 
+            [v_coords, u_coords], 
+            order=1, 
+            mode='nearest'
+        )
+
+
 
         img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (output_width, output_height)), xmap, ymap)
-        stable_frame = img_warped
-        return stable_frame
-        
-        
 
-    def get_stable_frame(self, frame_unstable):
+        stable_bboxs_coords = np.stack([x_prime, y_prime], axis=-1)
+
+        stable_frame = img_warped
+        return stable_frame, stable_bboxs_coords
+
+    def get_stable_frame(self, frame_unstable, bboxs_coords):
         
         # TODO check the logic
         if not self.has_started:
-            stable_frame, is_stable = self.stabilization_start(frame_unstable)
+            stable_frame, stable_bboxs_coords, is_stable = self.stabilization_start(frame_unstable, bboxs_coords)
             
             if stable_frame is not None:
-                return stable_frame, is_stable
+                return stable_frame, stable_bboxs_coords, is_stable
             
             self.has_started = True
         
-        stable_frame = self.get_stable_frame_infer(frame_unstable)
+        stable_frame, stable_bboxs_coords = self.get_stable_frame_infer(frame_unstable, bboxs_coords)
 
-        return stable_frame, True
+        return stable_frame, stable_bboxs_coords, True
 
     def reset(self):
         self.before_frames = []
@@ -395,16 +424,16 @@ while are_videos_left:
                     socket.send_string("ACK")
                     break
             
-            frame_unstable = recv_obj
+            frame_unstable, bboxs_coords = recv_obj
             
             
             start_time = time.time()
-            stable_frame, is_stable = stabilizer.get_stable_frame(frame_unstable)
+            stable_frame, stable_bboxs_coords, is_stable = stabilizer.get_stable_frame(frame_unstable, bboxs_coords)
             tot_time += time.time() - start_time
             
             # videoWriter.write(stable_frame)
             
-            socket.send_pyobj(stable_frame)
+            socket.send_pyobj((stable_frame, stable_bboxs_coords))
             
             
             
