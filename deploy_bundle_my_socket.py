@@ -187,7 +187,7 @@ def get_bbox(mask):
     x2 = float("-inf")
     y2 = float("-inf")
     
-    y_indexes, x_indexes = np.where(mask == 0)
+    y_indexes, x_indexes = np.where(mask == 1)
 
     if len(x_indexes) == 0:
         print("hi")
@@ -203,12 +203,12 @@ def get_bbox(mask):
 
 def remap(x1, y1, x2, y2, x_map, y_map):
     # TODO hcange to zeroes carefullly
-    mask = np.ones((output_width, output_height)) * 255
-    mask = mask.astype(np.uint8)
+    mask = np.zeroes((output_width, output_height))
+    # mask = mask.astype(np.uint8)
     
-    mask = cv2.resize(mask, (output_width, output_height))
+    # mask = cv2.resize(mask, (output_width, output_height))
     
-    cv2.rectangle(mask, (int(x1), int(y1)), (int(x2), int(y2)), 0, -1)
+    cv2.rectangle(mask, (int(x1), int(y1)), (int(x2), int(y2)), 1, -1)
     # display_resized(mask, width, height)
 
     print(mask)
