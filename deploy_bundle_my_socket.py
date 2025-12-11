@@ -180,6 +180,41 @@ def warpRevBundle(img, Hs):
 
 
 
+
+def get_bbox(mask):
+    x1 = float("inf")
+    y1 = float("inf")
+    x2 = float("-inf")
+    y2 = float("-inf")
+    
+    y_indexes, x_indexes = np.where(mask == 0)
+
+    if len(x_indexes) == 0:
+        print("hi")
+        return None
+    
+    x1 = float(min(x_indexes))
+    y1 = float(min(y_indexes))
+    x2 = float(max(x_indexes))
+    y2 = float(max(y_indexes))
+
+    return x1, y1, x2, y2
+
+
+def remap(x1, y1, x2, y2, x_map, y_map):
+    # TODO hcange to zeroes carefullly
+    mask = np.ones((output_width, output_height))
+    
+    cv2.rectangle(mask, (int(x1), int(y1)), (int(x2), int(y2)), 0, -1)
+    # display_resized(mask, width, height)
+
+    remapped_mask = cv2.remap(mask, x_map, y_map, cv2.INTER_LINEAR)
+    
+    p1_p2 = get_bbox(remapped_mask)
+    return p1_p2
+
+
+
 production_dir = os.path.join(args.output_dir, 'output')
 make_dirs(production_dir)
 
@@ -294,34 +329,24 @@ class VideoStabilizer():
 
         smoothed_x_map, smoothed_y_map = smooth_mapping(xmap, ymap)
         
-        print(bboxs_coords)
-        
-        if len(bboxs_coords) != 0:
-            u_coords = bboxs_coords[:, 0]
-            v_coords = bboxs_coords[:, 1]
-            
-            x_prime = map_coordinates(
-                smoothed_x_map, 
-                [v_coords, u_coords], 
-                order=1, 
-                mode='nearest'
-            )
-            
-            y_prime = map_coordinates(
-                smoothed_y_map, 
-                [v_coords, u_coords], 
-                order=1, 
-                mode='nearest'
-            )
+        stable_bboxs_coords = deepcopy(bboxs_coords)
+        for i, bbox_coords in enumerate(bboxs_coords):
+            (x1, y1), (x2, y2) = bbox_coords
+            remapping_res = remap(x1, y1, x2, y2, smoothed_x_map, smoothed_y_map)
+            if remapping_res is None:
+                # TODO handle out of bounds
+                new_x1, new_y1, new_w, new_h = (10000, 10000, bbox_coords[2], bbox_coords[3])
+                new_x2 = new_x1 + new_w
+                new_y2 = new_y1 + new_h
+            else:
+                new_x1, new_y1, new_x2, new_y2 = remapping_res
+            stable_bboxs_coords[i] = [(new_x1, new_y1), (new_x2, new_y2)]
+
 
 
 
         img_warped = warpRevBundle2(cv2.resize(self.after_temp[0], (output_width, output_height)), smoothed_x_map, smoothed_y_map)
 
-        if len(bboxs_coords) != 0:
-            stable_bboxs_coords = np.stack([x_prime, y_prime], axis=-1)
-        else:
-            stable_bboxs_coords = bboxs_coords
 
         stable_frame = img_warped
         return stable_frame, stable_bboxs_coords
@@ -403,7 +428,6 @@ while are_videos_left:
 
     print("fps: {}, width: {}, height: {}".format(fps, output_width, output_height))
 
-    # TODO try with original width and height
     # TODO check first frames handling
 
     stabilizer = VideoStabilizer(fps, before_ch, after_ch)
@@ -413,9 +437,6 @@ while are_videos_left:
     
     try:
         while(True):
-            # ret, frame_unstable = unstable_cap.read() 
-            # 2. Receive the frame
-            # recv_pyobj automatically reconstructs the numpy array
             recv_obj = socket.recv_pyobj()
 
             # Check for stop signal
