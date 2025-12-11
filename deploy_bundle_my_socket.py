@@ -203,7 +203,7 @@ def get_bbox(mask):
 
 def remap(x1, y1, x2, y2, x_map, y_map):
     # TODO hcange to zeroes carefullly
-    mask = np.zeroes((output_width, output_height))
+    mask = np.zeros((output_width, output_height))
     # mask = mask.astype(np.uint8)
     
     # mask = cv2.resize(mask, (output_width, output_height))
