@@ -208,9 +208,14 @@ def remap(x1, y1, x2, y2, x_map, y_map):
     cv2.rectangle(mask, (int(x1), int(y1)), (int(x2), int(y2)), 0, -1)
     # display_resized(mask, width, height)
 
+    print(f"{mask=}")
     remapped_mask = cv2.remap(mask, x_map, y_map, cv2.INTER_LINEAR)
+    print(f"{remapped_mask=}")
+
     
     p1_p2 = get_bbox(remapped_mask)
+    print(f"{p1_p2=}")
+    
     return p1_p2
 
 
