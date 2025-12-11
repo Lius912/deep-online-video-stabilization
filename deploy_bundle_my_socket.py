@@ -343,7 +343,7 @@ class VideoStabilizer():
             remapping_res = remap(x1, y1, x2, y2, smoothed_x_map, smoothed_y_map)
             if remapping_res is None:
                 # TODO handle out of bounds
-                new_x1, new_y1, new_w, new_h = (10000, 10000, bbox_coords[2], bbox_coords[3])
+                new_x1, new_y1, new_w, new_h = (10000, 10000, x2-x1, y2-y1)
                 new_x2 = new_x1 + new_w
                 new_y2 = new_y1 + new_h
             else:
