@@ -190,7 +190,7 @@ def get_bbox(mask):
     y_indexes, x_indexes = np.where(mask == 1)
 
     if len(x_indexes) == 0:
-        print("hi")
+        # print("hi")
         return None
     
     x1 = float(min(x_indexes))
@@ -211,13 +211,13 @@ def remap(x1, y1, x2, y2, x_map, y_map):
     cv2.rectangle(mask, (int(x1), int(y1)), (int(x2), int(y2)), 1, -1)
     # display_resized(mask, width, height)
 
-    print(mask)
+    # print(mask)
     remapped_mask = cv2.remap(mask, x_map, y_map, cv2.INTER_LINEAR)
-    print(remapped_mask)
+    # print(remapped_mask)
 
     
     p1_p2 = get_bbox(remapped_mask)
-    print(p1_p2)
+    # print(p1_p2)
     
     return p1_p2
 
